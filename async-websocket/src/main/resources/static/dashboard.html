@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="icon" type="image/x-icon" href="/favicon.ico">
+	<title>Dashboard</title>
+</head>
+<style>
+	body {
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+			Helvetica, Arial, sans-serif;
+	}
+	div {
+		margin: 0;
+		padding-bottom: 10px;
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		max-width: 90vw;
+		max-height: 100%;
+	}
+	canvas {
+		flex-wrap: wrap;
+		flex-grow: 1;
+		max-width: 500px !important;
+		max-height: 500px !important;
+	}
+</style>
+
+<body>
+	<h1 style="width: 100px;">Dashboard</h1>
+	<div>
+		<canvas id="sensoresBar"></canvas>
+		<canvas id="sensoresDoughnut"></canvas>
+		<canvas id="puntosChart"></canvas>
+	</div>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script>
+		const sensoresBar = new Chart(document.querySelector('#sensoresBar'), {
+			type: "bar",
+			data: {
+				labels: ["Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4",
+					"Sensor 5", "Sensor 6"],
+				datasets: [
+					{
+						label: "Old",
+						data: [0, 0, 0, 0, 0, 0],
+						backgroundColor: "#3e95cd",
+						borderColor: "#2390d3",
+						borderWidth: 1,
+					},
+					{
+						label: "New",
+						data: [10, 20, 10, 30, 40, 20],
+						backgroundColor: "#8e5ea2",
+						borderColor: "##b14fdb",
+						borderWidth: 1,
+					},
+				],
+			},
+			options: {
+				scales: {
+					y: {
+						beginAtZero: true,
+					},
+				},
+			},
+		});
+		const sensoresDoughnut = new Chart(document.querySelector('#sensoresDoughnut'), {
+			type: "doughnut",
+			data: {
+				labels: ["Sensor 1", "Sensor 2", "Sensor 3", "Sensor 4",
+					"Sensor 5", "Sensor 6"],
+				datasets: [
+					{
+						data: [10, 20, 10, 30, 40, 20],
+					},
+				],
+			},
+		});
+		const puntosChart = new Chart(document.querySelector('#puntosChart'), {
+			type: "scatter",
+			data: {
+				datasets: [{
+					label: 'Dorsales',
+					pointRadius: 4,
+					pointBackgroundColor: "rgb(0,0,255)",
+					data: []
+				}]
+			},
+			options: {
+				plugins: {
+					legend: { display: false },
+					scales: {
+						xAxes: [{ ticks: { min: 40, max: 160 } }],
+						yAxes: [{ ticks: { min: 6, max: 16 } }],
+					}
+				}
+			}
+		});
+
+		webSocket = new WebSocket(`ws://${location.host}/dashboard`);
+		webSocket.onmessage = function (message) {
+			const data = JSON.parse(message.data);
+			console.log(data);
+			if (data.sensores) {
+				sensoresBar.data.datasets[0].data = sensoresBar.data.datasets[1].data;
+				sensoresBar.data.datasets[1].data = sensoresDoughnut.data.datasets[0].data;
+				sensoresBar.update();
+				sensoresDoughnut.data.datasets[0].data = data.sensores;
+				sensoresDoughnut.update();
+			}
+			if (data.puntos) {
+				puntosChart.data.datasets[0].data = data.puntos;
+				puntosChart.update();
+			}
+		};
+	</script>
+</body>
+
+</html>

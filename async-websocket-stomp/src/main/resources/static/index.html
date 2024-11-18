@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<title>Socket chat</title>
+<style>
+* {
+	box-sizing: border-box;
+}
+
+html, body {
+	height: 100vh;
+	width: 100vw;
+	margin: 0;
+}
+
+body {
+	margin: 0;
+	padding-bottom: 10px;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+		Helvetica, Arial, sans-serif;
+	background: rgba(0, 0, 0, 0.15);
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: stretch;
+}
+
+form {
+	margin: 2px 10px 0px 10px;
+	display: flex;
+	height: 3rem;
+	/* backdrop-filter: blur(10px); */
+}
+input {
+	border: none;
+	padding: 0 1rem;
+	flex-grow: 1;
+	border-radius: 2rem;
+	margin: 0.25rem;
+}
+
+input:focus {
+	outline: none;
+}
+
+form>button {
+	background: #333;
+	border: none;
+	padding: 0 1rem;
+	margin: 0.25rem;
+	border-radius: 3px;
+	outline: none;
+	color: #fff;
+}
+
+.oculto {
+	display: none;
+}
+
+div {
+	flex: 1;
+	align-self: stretch;
+	align-content: stretch;
+	display: flex;
+	justify-content: space-around;
+	align-items: stretch;
+}
+
+#messages, #trace {
+	flex: 1;
+	overflow: auto;
+	margin: 2px 10px 0px 10px;
+	padding: 5px; 
+	border-radius: 1rem;
+	box-sizing: border-box;
+	list-style-type: none;
+	min-height: 100%;
+	max-height: 90vh;
+	background-color: #fff;
+}
+#messages {
+	flex: 2;
+	margin-right: 0;
+}
+
+#messages>li, #trace > li {
+	padding: 0.5rem 1rem;
+}
+
+#messages>li:nth-child(odd) {
+	background: #efefef;
+}
+</style>
+</head>
+
+<body>
+	<form id="connect" action="">
+		<input autocomplete="off" title="connect" placeholder="Introduce tu nombre" />
+		<button type="submit">connect</button>
+	</form>
+	<div>
+		<ul id="messages"></ul>
+		<ul id="trace"></ul>
+	</div>
+	<form id="publish" action="">
+		<input autocomplete="off" value="Hola" title="mensaje" />
+		<button type="submit">Send</button>
+		<button type="button">Disconnect</button>
+	</form>
+
+    <script src="/webjars/stomp-websocket/stomp.min.js"></script>
+	<script>
+    let stompClient
+    let container = document.querySelector('div');
+    let messages = document.querySelector('#messages');
+    let traza = document.querySelector('#trace');
+    let input = document.querySelector('#publish input');
+	let username = ''
+	let unsubscribe
+
+    const show = msg => {
+      var item = document.createElement('li');
+      item.textContent = msg;
+      messages.appendChild(item);
+      item.focus()
+      messages.scrollTo(0, messages.scrollHeight);
+    }
+    const trace = msg => {
+      var item = document.createElement('li');
+      item.textContent = msg;
+      traza.appendChild(item);
+      item.focus()
+      traza.scrollTo(0, traza.scrollHeight);
+    }
+    const toggle = () => {
+      document.forms.publish.className = document.forms.publish.className === '' ? 'oculto' : ''
+      document.forms.connect.className = document.forms.publish.className === '' ? 'oculto' : ''
+    }
+    document.forms.publish.className = 'oculto'
+    document.forms.connect.addEventListener('submit', e => {
+      e.preventDefault();
+      let input = document.querySelector('#connect>input');
+      if (input.value) {
+		username = input.value
+        stompClient = Stomp.client(`ws://${location.host}/chat`);
+		unsubscribe = stompClient.connect({}, frame => {
+            trace(`[open] Conexión establecida: ${JSON.stringify(frame)}`)
+            stompClient.subscribe('/topic/messages', function (response) {
+            	let messaje = JSON.parse(response.body)
+                show(`${messaje.name}: ${messaje.text}`)
+            });
+            toggle()
+		}, error => traza(`[error]: ${JSON.stringify(error)}`));
+      }
+    });
+    document.forms.publish.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (input.value) {
+        trace(`[send] ${input.value}`);
+		stompClient.send("/example/chat", {}, JSON.stringify({'name': username, text: input.value}));
+        // input.value = '';
+      }
+    });
+    document.querySelector('#publish [type=button]').addEventListener('click',() => {
+    	if(unsubscribe) unsubscribe();
+    	stompClient.disconnect(() => show(`[close] Disconnect`));
+    	toggle()
+    })
+  </script>
+</body>
+
+</html>

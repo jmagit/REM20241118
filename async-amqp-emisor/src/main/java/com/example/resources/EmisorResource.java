@@ -97,6 +97,15 @@ public class EmisorResource {
 		amqp.send(deadLetterQueue.getName(), message);
 		return "SEND: " + mapper.writeValueAsString(message);
 	}
+
+	@GetMapping(path = "/nexterror")
+	@Operation(tags = { "dead-letter" }, summary = "Recupera manualmente el siguiente mensaje fallido de la cola dead letter")
+	public ResponseEntity<?> nextError() {
+		var last = amqp.receiveAndConvert(deadLetterQueue.getName());
+		if(last == null)
+			return ResponseEntity.notFound().build();
+		return ResponseEntity.ok(last);
+	}
 	
 	@Value("${app.topic.exchange}") 
 	private String topicExchange;
@@ -125,7 +134,7 @@ public class EmisorResource {
 			) throws JsonProcessingException {
 		var message = switch (lang) { case "eu" -> "Kaixo"; case "gl" -> "Ola"; default -> "Hola"; } + " " + nombre; 
 		amqp.convertAndSend(topicHeaders, "", new MessageDTO(message, origen), 
-				m -> {  m.getMessageProperties().setHeader("lang", lang);  return m;  });
+				m -> {  m.getMessageProperties().setHeader("lang", lang);  return m; });
 		return "SEND: " + message;
 //		var payload = new MessageDTO(switch (lang) { case "eu" -> "Kaixo"; case "gl" -> "Ola"; default -> "Hola"; } + " " + nombre, origen);
 //		ObjectMapper mapper = new ObjectMapper();
@@ -137,16 +146,6 @@ public class EmisorResource {
 //		amqp.send(topicHeaders, "", message);
 //		return "SEND: " + mapper.writeValueAsString(message);
 	}
-
-	@GetMapping(path = "/nexterror")
-	@Operation(tags = { "dead-letter" }, summary = "Recupera manualmente el siguiente mensaje fallido de la cola dead letter")
-	public ResponseEntity<?> nextError() {
-		var last = amqp.receiveAndConvert(deadLetterQueue.getName());
-		if(last == null)
-			return ResponseEntity.notFound().build();
-		return ResponseEntity.ok(last);
-	}
-
 
 	@Value("${app.rpc.routing-key}")
 	String routingKey;

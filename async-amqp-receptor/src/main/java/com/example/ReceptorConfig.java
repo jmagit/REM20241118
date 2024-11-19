@@ -11,6 +11,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.SendTo;
 
 import com.example.models.MessageDTO;
 import com.example.models.Store;
@@ -75,5 +76,28 @@ public class ReceptorConfig {
     	return out;
     }
 
-    
+    @RabbitListener(queues = "coreo.paso1")
+    @SendTo("coreo.paso2")
+    public MessageDTO listenerPaso1(MessageDTO in, Channel channel) throws InterruptedException {
+    	if(pausa) {
+    		throw new ImmediateRequeueAmqpException("En pausa");
+    	}
+    	if(in.getMsg() == null) {
+    		throw new AmqpRejectAndDontRequeueException("Mensaje invalido.");
+    	}
+    	in.setMsg(in.getMsg() + " -> paso 1 (" + origen +")");
+    	LOGGER.warning("PASO: " + in.getMsg());
+    	return in;
+    }
+
+
+    @RabbitListener(queues = "coreo.paso3")
+    @SendTo("coreo.paso4")
+    public MessageDTO listenerPaso3(MessageDTO in, Channel channel) throws InterruptedException {
+    	in.setMsg(in.getMsg() + " -> paso 3 (" + origen +")");
+    	Thread.sleep(500);
+    	LOGGER.warning("PASO: " + in.getMsg());
+    	return in;
+    }
+
 }

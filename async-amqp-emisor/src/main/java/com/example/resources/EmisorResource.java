@@ -14,6 +14,7 @@ import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.AsyncRabbitTemplate;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.connection.CorrelationData.Confirm;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -21,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,6 +34,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import com.example.models.MessageDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rabbitmq.client.Channel;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -223,6 +226,14 @@ public class EmisorResource {
 	@Autowired
 	private RabbitTemplate rabbitTemplate;
 
+	@GetMapping(path = "/sinconfirm/{mensaje}")
+	@ResponseStatus(HttpStatus.ACCEPTED)
+	@Operation(tags = { "confirm" }, summary = "Envia el mensaje sin confirmación")
+	public String sinConfirm(@PathVariable String mensaje, @RequestParam String exchange) {
+		amqp.convertAndSend(exchange, "", mensaje);
+		return "SEND: " + mensaje; 
+	}
+	
 	@GetMapping(path = "/confirm/{mensaje}")
 	@ResponseStatus(HttpStatus.ACCEPTED)
 	@Operation(tags = { "confirm" }, summary = "Envia el mensaje con confirmación")
@@ -248,6 +259,15 @@ public class EmisorResource {
 		} catch (InterruptedException | ExecutionException | TimeoutException e) {
 			return e.getMessage();
 		}
+	}
+
+	@GetMapping(path = "/coreografia/{procesoId}")
+	@ResponseStatus(HttpStatus.ACCEPTED)
+	@Operation(tags = { "coreo" }, summary = "Envia el mensaje sin confirmación")
+	public String lanza(@PathVariable("procesoId") int id) {
+		var m = new MessageDTO("Proceso " + id + " (" + origen + ")", origen);
+		amqp.convertAndSend("coreo.paso1", m);
+		return "Inicio proceso " + id; 
 	}
 
 }

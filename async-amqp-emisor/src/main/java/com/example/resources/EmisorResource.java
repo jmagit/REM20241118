@@ -4,14 +4,19 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.MessageBuilder;
-import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.AsyncRabbitTemplate;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
+import org.springframework.amqp.rabbit.connection.CorrelationData.Confirm;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -215,5 +220,35 @@ public class EmisorResource {
 	public Collection<MessageDTO> todasLasRespuestas() {
 		return respuestas.values().stream().sorted((a, b) -> b.getEnviado().compareTo(a.getEnviado())).toList();
 	}
-	
+
+	@Autowired
+	private RabbitTemplate rabbitTemplate;
+
+	@GetMapping(path = "/confirm/{mensaje}")
+	@ResponseStatus(HttpStatus.ACCEPTED)
+	@Operation(tags = { "confirm" }, summary = "Envia el mensaje con confirmación")
+	public String confirm(@PathVariable String mensaje, @RequestParam String exchange) {
+		rabbitTemplate.setConfirmCallback((correlation, ack, reason) -> {
+			if (correlation != null) {
+				LOGGER.info("Received " + (ack ? "ack" : "nack") + " for correlation: " + correlation);
+			} else {
+				LOGGER.severe("No correlation");
+			}
+		});
+		rabbitTemplate.setReturnsCallback(returned -> {
+			LOGGER.info("Returned: " + returned.getMessage() + "\nreplyCode: " + returned.getReplyCode()
+					+ "\nreplyText: " + returned.getReplyText() + "\nexchange/rk: "
+					+ returned.getExchange() + "/" + returned.getRoutingKey());
+		});
+		CorrelationData correlationData = new CorrelationData("Correlation for " + UUID.randomUUID().toString());
+		rabbitTemplate.convertAndSend(exchange, "", mensaje, correlationData);
+		Confirm confirm;
+		try {
+			confirm = correlationData.getFuture().get(10, TimeUnit.SECONDS);
+			return confirm.isAck() ? ("SEND: " + mensaje) : ("NACK: " + confirm.getReason());
+		} catch (InterruptedException | ExecutionException | TimeoutException e) {
+			return e.getMessage();
+		}
+	}
+
 }

@@ -164,4 +164,3 @@ Comando:
 - [Spring Cloud Stream](https://spring.io/guides/gs/spring-cloud-stream)
 - [Using WebSocket to build an interactive web application](https://spring.io/guides/gs/messaging-stomp-websocket)
 - [Managing Transactions](https://spring.io/guides/gs/managing-transactions)
-

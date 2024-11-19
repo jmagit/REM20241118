@@ -86,6 +86,7 @@ public class ReceptorConfig {
     		throw new AmqpRejectAndDontRequeueException("Mensaje invalido.");
     	}
     	in.setMsg(in.getMsg() + " -> paso 1 (" + origen +")");
+    	Thread.sleep(500);
     	LOGGER.warning("PASO: " + in.getMsg());
     	return in;
     }
@@ -97,6 +98,17 @@ public class ReceptorConfig {
     	in.setMsg(in.getMsg() + " -> paso 3 (" + origen +")");
     	Thread.sleep(500);
     	LOGGER.warning("PASO: " + in.getMsg());
+    	return in;
+    }
+
+    @RabbitListener(queues = "orquesta.pasoA")
+    public MessageDTO respondeA(MessageDTO in) throws InterruptedException {
+    	in.setMsg(in.getMsg() + " -> paso A (" + origen +")");
+    	return in;
+    }
+    @RabbitListener(queues = "orquesta.pasoB")
+    public MessageDTO respondeB(MessageDTO in) throws InterruptedException {
+    	in.setMsg(in.getMsg() + " -> paso B (" + origen +")");
     	return in;
     }
 

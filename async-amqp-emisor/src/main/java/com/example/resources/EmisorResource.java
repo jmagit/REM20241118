@@ -261,12 +261,33 @@ public class EmisorResource {
 		}
 	}
 
-	@GetMapping(path = "/coreografia/{procesoId}")
+	@GetMapping(path = "/transaccion/coreografia/{procesoId}")
 	@ResponseStatus(HttpStatus.ACCEPTED)
-	@Operation(tags = { "coreo" }, summary = "Envia el mensaje sin confirmación")
+	@Operation(tags = { "transaccion" }, summary = "Lanza una coreografia")
 	public String lanza(@PathVariable("procesoId") int id) {
 		var m = new MessageDTO("Proceso " + id + " (" + origen + ")", origen);
 		amqp.convertAndSend("coreo.paso1", m);
+		return "Inicio proceso " + id; 
+	}
+
+	@GetMapping(path = "/transaccion/orquestacion/{procesoId}")
+	@ResponseStatus(HttpStatus.ACCEPTED)
+	@Operation(tags = { "transaccion" }, summary = "Lanza una orquestacion")
+	public String orquesta(@PathVariable("procesoId") int id) {
+		var peticion = new MessageDTO("Proceso " + id + " (" + origen + ")", origen);
+		
+		asyncRabbitTemplate.convertSendAndReceive("orquesta.pasoA", peticion)
+				.thenAccept(result -> {		
+					asyncRabbitTemplate.convertSendAndReceive("orquesta.pasoB", result)
+						.thenAccept(result2 -> {LOGGER.severe(result2.toString());})
+						.exceptionally(ex -> {
+							LOGGER.severe(ex.toString());
+							return null;
+						});})
+				.exceptionally(ex -> {
+					LOGGER.severe(ex.toString());
+					return null;
+				});
 		return "Inicio proceso " + id; 
 	}
 

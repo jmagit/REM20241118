@@ -32,6 +32,7 @@ public class EmisorConfig {
     @SendTo("coreo.paso3")
     public MessageDTO listenerPaso2(MessageDTO in, Channel channel) throws InterruptedException {
     	in.setMsg(in.getMsg() + " -> paso 2 (" + origen +")");
+    	Thread.sleep(500);
     	LOGGER.warning("PASO: " + in.getMsg());
     	return in;
     }

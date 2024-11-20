@@ -1,9 +1,11 @@
 package com.example.resources;
 
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -281,17 +283,37 @@ public class EmisorResource {
 		var peticion = new MessageDTO("Proceso " + id + " (" + origen + ")", origen);
 		
 		LOGGER.info("Arranca la orquestación");
-		asyncRabbitTemplate.convertSendAndReceive("orquesta.pasoA", peticion)
-				.thenAccept(result1 -> {	
-					LOGGER.info("PASO 1: " + result1.toString());
-					asyncRabbitTemplate.convertSendAndReceive("orquesta.pasoB", result1)
-						.thenAccept(result2 -> {
-							LOGGER.info("PASO 2: " + result2.toString());
-							})
-						.exceptionally(onOrquestationException());})
-				.exceptionally(onOrquestationException());
+		var orquestacion = new ArrayDeque<String>();
+		orquestacion.add("orquesta.pasoA");
+		orquestacion.add("orquesta.pasoB");
+		orquestacion.add("orquesta.pasoC");
+//		orquestacion.add("");
+		runOrquestacion(orquestacion, peticion);
+//		asyncRabbitTemplate.convertSendAndReceive("orquesta.pasoA", peticion)
+//				.thenAccept(result1 -> {	
+//					LOGGER.info("PASO 1: " + result1.toString());
+//					asyncRabbitTemplate.convertSendAndReceive("orquesta.pasoB", result1)
+//						.thenAccept(result2 -> {
+//							LOGGER.info("PASO 2: " + result2.toString());
+//							})
+//						.exceptionally(onOrquestationException());})
+//				.exceptionally(onOrquestationException());
 		return "Inicio proceso " + id; 
 	}
+
+    private CompletableFuture<Void> runOrquestacion(java.util.Queue<String> steps, Object message) {
+    	String routingKey = steps.poll();
+		return asyncRabbitTemplate.convertSendAndReceive(routingKey, message)
+			.thenAccept(result -> {
+					LOGGER.info(routingKey + ": " + result.toString());
+					if(steps.isEmpty()) {
+						LOGGER.info("Fin de la orquestación");
+					} else {
+						runOrquestacion(steps, result);
+					}
+				})
+			.exceptionally(onOrquestationException());
+    }
 
 	private Function<Throwable, ? extends Void> onOrquestationException() {
 		return ex -> {
@@ -299,4 +321,5 @@ public class EmisorResource {
 			return null;
 		};
 	}
+
 }

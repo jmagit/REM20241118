@@ -43,4 +43,10 @@ public class EmisorConfig {
     	LOGGER.warning("PASO: " + in.getMsg());
     }
 
+    @RabbitListener(queues = "orquesta.pasoB")
+    public MessageDTO respondeB(MessageDTO in) throws InterruptedException {
+    	in.setMsg(in.getMsg() + " -> paso B (" + origen +")");
+    	return in;
+    }
+
 }

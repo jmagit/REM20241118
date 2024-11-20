@@ -106,9 +106,9 @@ public class ReceptorConfig {
     	in.setMsg(in.getMsg() + " -> paso A (" + origen +")");
     	return in;
     }
-    @RabbitListener(queues = "orquesta.pasoB")
+    @RabbitListener(queues = "orquesta.pasoC")
     public MessageDTO respondeB(MessageDTO in) throws InterruptedException {
-    	in.setMsg(in.getMsg() + " -> paso B (" + origen +")");
+    	in.setMsg(in.getMsg() + " -> paso C (" + origen +")");
     	return in;
     }
 

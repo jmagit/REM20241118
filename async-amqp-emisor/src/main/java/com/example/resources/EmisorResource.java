@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.logging.Logger;
 
 import org.springframework.amqp.core.AmqpTemplate;
@@ -14,6 +15,7 @@ import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.AsyncRabbitTemplate;
+import org.springframework.amqp.rabbit.RabbitConverterFuture;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.connection.CorrelationData.Confirm;
@@ -228,7 +230,7 @@ public class EmisorResource {
 
 	@GetMapping(path = "/sinconfirm/{mensaje}")
 	@ResponseStatus(HttpStatus.ACCEPTED)
-	@Operation(tags = { "confirm" }, summary = "Envia el mensaje sin confirmación")
+	@Operation(tags = { "publisher-confirms" }, summary = "Envia el mensaje sin confirmación")
 	public String sinConfirm(@PathVariable String mensaje, @RequestParam String exchange) {
 		amqp.convertAndSend(exchange, "", mensaje);
 		return "SEND: " + mensaje; 
@@ -236,7 +238,7 @@ public class EmisorResource {
 	
 	@GetMapping(path = "/confirm/{mensaje}")
 	@ResponseStatus(HttpStatus.ACCEPTED)
-	@Operation(tags = { "confirm" }, summary = "Envia el mensaje con confirmación")
+	@Operation(tags = { "publisher-confirms" }, summary = "Envia el mensaje con confirmación")
 	public String confirm(@PathVariable String mensaje, @RequestParam String exchange) {
 		rabbitTemplate.setConfirmCallback((correlation, ack, reason) -> {
 			if (correlation != null) {
@@ -260,35 +262,41 @@ public class EmisorResource {
 			return e.getMessage();
 		}
 	}
+	
+	
 
-	@GetMapping(path = "/transaccion/coreografia/{procesoId}")
+	@GetMapping(path = "/coreografia/{procesoId}")
 	@ResponseStatus(HttpStatus.ACCEPTED)
-	@Operation(tags = { "transaccion" }, summary = "Lanza una coreografia")
+	@Operation(tags = { "workflow" }, summary = "Lanza una coreografia")
 	public String lanza(@PathVariable("procesoId") int id) {
 		var m = new MessageDTO("Proceso " + id + " (" + origen + ")", origen);
 		amqp.convertAndSend("coreo.paso1", m);
 		return "Inicio proceso " + id; 
 	}
 
-	@GetMapping(path = "/transaccion/orquestacion/{procesoId}")
+	@GetMapping(path = "/orquestacion/{procesoId}")
 	@ResponseStatus(HttpStatus.ACCEPTED)
-	@Operation(tags = { "transaccion" }, summary = "Lanza una orquestacion")
+	@Operation(tags = { "workflow" }, summary = "Lanza una orquestacion")
 	public String orquesta(@PathVariable("procesoId") int id) {
 		var peticion = new MessageDTO("Proceso " + id + " (" + origen + ")", origen);
 		
+		LOGGER.info("Arranca la orquestación");
 		asyncRabbitTemplate.convertSendAndReceive("orquesta.pasoA", peticion)
-				.thenAccept(result -> {		
-					asyncRabbitTemplate.convertSendAndReceive("orquesta.pasoB", result)
-						.thenAccept(result2 -> {LOGGER.severe(result2.toString());})
-						.exceptionally(ex -> {
-							LOGGER.severe(ex.toString());
-							return null;
-						});})
-				.exceptionally(ex -> {
-					LOGGER.severe(ex.toString());
-					return null;
-				});
+				.thenAccept(result1 -> {	
+					LOGGER.info("PASO 1: " + result1.toString());
+					asyncRabbitTemplate.convertSendAndReceive("orquesta.pasoB", result1)
+						.thenAccept(result2 -> {
+							LOGGER.info("PASO 2: " + result2.toString());
+							})
+						.exceptionally(onOrquestationException());})
+				.exceptionally(onOrquestationException());
 		return "Inicio proceso " + id; 
 	}
 
+	private Function<Throwable, ? extends Void> onOrquestationException() {
+		return ex -> {
+			LOGGER.info(ex.toString());
+			return null;
+		};
+	}
 }

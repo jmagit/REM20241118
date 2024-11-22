@@ -39,7 +39,7 @@ public class ReceptorConfig {
     	LOGGER.warning("RECIBIDO: " + in);
     }
     
-    @RabbitListener(queues = "#{'${app.colas.lang}'.split(',')}")
+    @RabbitListener(queues = "#{'${app.idiomas.colas}'.split(',')}")
     public void listenerMulticola(MessageDTO in, @Header("lang") String lang, 
     		org.springframework.amqp.core.Message messageRaw) throws InterruptedException {
     	if(in.getMsg() == null) {
@@ -51,7 +51,7 @@ public class ReceptorConfig {
        	LOGGER.warning("RAW: " + messageRaw);
     }
     
-    @RabbitListener(queues = "#{'${app.colas.topic}'.split(',')}")
+    @RabbitListener(queues = "#{'${app.topic.colas}'.split(',')}")
     public void listenerTema(MessageDTO in, org.springframework.amqp.core.Message messageRaw) throws InterruptedException {
     	if(in.getMsg() == null) {
     		throw new AmqpRejectAndDontRequeueException("Mensaje invalido.");
@@ -76,8 +76,8 @@ public class ReceptorConfig {
     	return out;
     }
 
-    @RabbitListener(queues = "coreo.paso1")
-    @SendTo("coreo.paso2")
+    @RabbitListener(queues = "demos.coreografia.paso1")
+    @SendTo("demos.coreografia.paso2")
     public MessageDTO listenerPaso1(MessageDTO in, Channel channel) throws InterruptedException {
     	if(pausa) {
     		throw new ImmediateRequeueAmqpException("En pausa");
@@ -92,8 +92,8 @@ public class ReceptorConfig {
     }
 
 
-    @RabbitListener(queues = "coreo.paso3")
-    @SendTo("coreo.paso4")
+    @RabbitListener(queues = "demos.coreografia.paso3")
+    @SendTo("demos.coreografia.paso4")
     public MessageDTO listenerPaso3(MessageDTO in, Channel channel) throws InterruptedException {
     	in.setMsg(in.getMsg() + " -> paso 3 (" + origen +")");
     	Thread.sleep(500);
@@ -101,12 +101,12 @@ public class ReceptorConfig {
     	return in;
     }
 
-    @RabbitListener(queues = "orquesta.pasoA")
+    @RabbitListener(queues = "demos.orquetacion.pasoA")
     public MessageDTO respondeA(MessageDTO in) throws InterruptedException {
     	in.setMsg(in.getMsg() + " -> paso A (" + origen +")");
     	return in;
     }
-    @RabbitListener(queues = "orquesta.pasoC")
+    @RabbitListener(queues = "demos.orquetacion.pasoC")
     public MessageDTO respondeB(MessageDTO in) throws InterruptedException {
     	in.setMsg(in.getMsg() + " -> paso C (" + origen +")");
     	return in;

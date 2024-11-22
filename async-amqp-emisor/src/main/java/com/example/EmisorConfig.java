@@ -28,8 +28,8 @@ public class EmisorConfig {
 	@Value("${spring.application.name}:${server.port}")
 	private String origen;
 
-    @RabbitListener(queues = "coreo.paso2")
-    @SendTo("coreo.paso3")
+    @RabbitListener(queues = "demos.coreografia.paso2")
+    @SendTo("demos.coreografia.paso3")
     public MessageDTO listenerPaso2(MessageDTO in, Channel channel) throws InterruptedException {
     	in.setMsg(in.getMsg() + " -> paso 2 (" + origen +")");
     	Thread.sleep(500);
@@ -37,13 +37,13 @@ public class EmisorConfig {
     	return in;
     }
 
-    @RabbitListener(queues = "coreo.paso4")
+    @RabbitListener(queues = "demos.coreografia.paso4")
     public void listenerPaso4(MessageDTO in, Channel channel) throws InterruptedException {
     	in.setMsg(in.getMsg() + " -> proceso concluido (" + origen + ")");
     	LOGGER.warning("PASO: " + in.getMsg());
     }
 
-    @RabbitListener(queues = "orquesta.pasoB")
+    @RabbitListener(queues = "demos.orquetacion.pasoB")
     public MessageDTO respondeB(MessageDTO in) throws InterruptedException {
     	in.setMsg(in.getMsg() + " -> paso B (" + origen +")");
     	return in;

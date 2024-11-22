@@ -272,7 +272,7 @@ public class EmisorResource {
 	@Operation(tags = { "workflow" }, summary = "Lanza una coreografia")
 	public String lanza(@PathVariable("procesoId") int id) {
 		var m = new MessageDTO("Proceso " + id + " (" + origen + ")", origen);
-		amqp.convertAndSend("coreo.paso1", m);
+		amqp.convertAndSend("demos.coreografia.paso1", m);
 		return "Inicio proceso " + id; 
 	}
 
@@ -284,15 +284,15 @@ public class EmisorResource {
 		
 		LOGGER.info("Arranca la orquestación");
 		var orquestacion = new ArrayDeque<String>();
-		orquestacion.add("orquesta.pasoA");
-		orquestacion.add("orquesta.pasoB");
-		orquestacion.add("orquesta.pasoC");
+		orquestacion.add("demos.orquetacion.pasoA");
+		orquestacion.add("demos.orquetacion.pasoB");
+		orquestacion.add("demos.orquetacion.pasoC");
 //		orquestacion.add("");
 		runOrquestacion(orquestacion, peticion);
-//		asyncRabbitTemplate.convertSendAndReceive("orquesta.pasoA", peticion)
+//		asyncRabbitTemplate.convertSendAndReceive("demos.orquetacion.pasoA", peticion)
 //				.thenAccept(result1 -> {	
 //					LOGGER.info("PASO 1: " + result1.toString());
-//					asyncRabbitTemplate.convertSendAndReceive("orquesta.pasoB", result1)
+//					asyncRabbitTemplate.convertSendAndReceive("demos.orquetacion.pasoB", result1)
 //						.thenAccept(result2 -> {
 //							LOGGER.info("PASO 2: " + result2.toString());
 //							})
